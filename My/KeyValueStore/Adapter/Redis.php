@@ -93,33 +93,39 @@ class My_KeyValueStore_Adapter_Redis extends My_KeyValueStore_Adapter_Abstract {
 		}
 		
 		$this->_connect();
-		$values = $this->_getBase( $name, null );
-		if ( $values instanceof ArrayIterator == false && is_array( $values ) == false ) {
-			require_once 'My/KeyValueStore/Exception.php';
-			throw new My_KeyValueStore_Exception( 'Specified key having value is not array or unsupported append method.' );
-		}
-		if ( $values instanceof ArrayIterator ) {
-			$values->append( $value );
-		} elseif ( is_array( $values ) == true || $values == null ) {
-			if ( method_exists( $this, ( '_getAppendKey' ) ) ) {
-				// _getAppendKeyというメソッドが実装されていれば、そこからキーを取得する
-				$appendKey = $this->_getAppendKey( $name, $userId );
-				if ( $appendKey === false || $appendKey == null ) {
-					require_once 'My/KeyValueStore/Exception.php';
-					throw new My_KeyValueStore_Exception( 'Appending key name does not get.' );
-				}
-				$values[ $appendKey ] = $value;
-			} else {
-				// 無ければ現在の配列に追記する
-				$values[] = $value;
+		
+		$result = $this->_connection->rPush( $name, $value );
+		if ( $resut == false ) {
+			$values = $this->_getBase( $name, null );
+			if ( $values instanceof ArrayIterator == false && is_array( $values ) == false ) {
+				require_once 'My/KeyValueStore/Exception.php';
+				throw new My_KeyValueStore_Exception( 'Specified key having value is not array or unsupported append method.' );
 			}
-		}
-		// _setBase 実行用パラメータ生成
-		$setArgs = array(
+			if ( $values instanceof ArrayIterator ) {
+				$values->append( $value );
+			} elseif ( is_array( $values ) == true || $values == null ) {
+				if ( method_exists( $this, ( '_getAppendKey' ) ) ) {
+					// _getAppendKeyというメソッドが実装されていれば、そこからキーを取得する
+					$appendKey = $this->_getAppendKey( $name, $userId );
+					if ( $appendKey === false || $appendKey == null ) {
+						require_once 'My/KeyValueStore/Exception.php';
+						throw new My_KeyValueStore_Exception( 'Appending key name does not get.' );
+					}
+					$values[ $appendKey ] = $value;
+				} else {
+					// 無ければ現在の配列に追記する
+					$values[] = $value;
+				}
+			}
+			// _setBase 実行用パラメータ生成
+			$setArgs = array(
 				$values,
 				$expiration,
-		);
-		return $this->_setBase( $name, $setArgs );
+			);
+			$result = $this->_setBase( $name, $setArgs );
+		}
+		
+		return $result;
 	}
 	
 	/**
@@ -156,8 +162,8 @@ class My_KeyValueStore_Adapter_Redis extends My_KeyValueStore_Adapter_Abstract {
 		}
 		// _setBase 実行用パラメータ生成
 		$setArgs = array(
-				$values,
-				$expiration,
+			$values,
+			$expiration,
 		);
 		return $this->_setBase( $name, $setArgs );
 	}
@@ -177,34 +183,39 @@ class My_KeyValueStore_Adapter_Redis extends My_KeyValueStore_Adapter_Abstract {
 			require_once 'My/KeyValueStore/Exception.php';
 			throw new My_KeyValueStore_Exception( 'Pull index does not specified.' );
 		}
-		$values = $this->_getBase( $name, null );
-		if ( $values instanceof ArrayIterator == false && is_array( $values ) == false ) {
-			require_once 'My/KeyValueStore/Exception.php';
-			throw new My_KeyValueStore_Exception( 'Specified key having value could not remove by index.' );
-		}
-		if ( $values instanceof ArrayIterator ) {
-			if ( $values->offsetExists( $index ) == false ) {
-				require_once 'My/KeyValueStore/Exception.php';
-				throw new My_KeyValueStore_Exception( 'Specified index does not find.' );
+		$pullValue = $this->_connection->lPop( $name );
+		
+		if ( $result == false ) {
+			
+			$values = $this->_getBase( $name, null );
+			if ( $values instanceof ArrayIterator == false && is_array( $values ) == false ) {
+				require_once 'Recs/Apps/KeyValueStore/Exception.php';
+				throw new Recs_Apps_KeyValueStore_Exception( 'Specified key having value could not remove by index.' );
 			}
-			$pullValue = $values->offsetGet( $index );
-			$values->offsetUnset( $index );
-		} elseif ( is_array( $values ) == true ) {
-			if ( isset( $values[ $index ] ) == false ) {
-				require_once 'My/KeyValueStore/Exception.php';
-				throw new My_KeyValueStore_Exception( 'Specified index does not find.' );
+			if ( $values instanceof ArrayIterator ) {
+				if ( $values->offsetExists( $index ) == false ) {
+					require_once 'My/KeyValueStore/Exception.php';
+					throw new My_KeyValueStore_Exception( 'Specified index does not find.' );
+				}
+				$pullValue = $values->offsetGet( $index );
+				$values->offsetUnset( $index );
+			} elseif ( is_array( $values ) == true ) {
+				if ( isset( $values[ $index ] ) == false ) {
+					require_once 'My/KeyValueStore/Exception.php';
+					throw new My_KeyValueStore_Exception( 'Specified index does not find.' );
+				}
+				$pullValue = $values[ $index ];
+				unset( $values[ $index ] );
 			}
-			$pullValue = $values[ $index ];
-			unset( $values[ $index ] );
-		}
-		// _setBase 実行用パラメータ生成
-		$setArgs = array(
+			// _setBase 実行用パラメータ生成
+			$setArgs = array(
 				$values,
 				$expiration,
-		);
-		if ( $this->_setBase( $name, $setArgs ) == false ) {
-			require_once 'My/KeyValueStore/Exception.php';
-			throw new My_KeyValueStore_Exception( 'Failed to set values to key' );
+			);
+			if ( $this->_setBase( $name, $setArgs ) == false ) {
+				require_once 'My/KeyValueStore/Exception.php';
+				throw new My_KeyValueStore_Exception( 'Failed to set values to key' );
+			}
 		}
 		return $pullValue;
 	}
