@@ -1,6 +1,79 @@
 <?php
 require_once 'My/Utility.php';
-
+/**
+ * Simplify and basicaly operate interface adapter abstract class
+ * for various key value store
+ *
+ * $kvs = Recs_Apps_KeyValueStore::factory( $configs );
+ *
+ * [ SET the value for key name ]
+ * If you want to set $value to key name of <KeyName>
+ *  and result by boolean.
+ * $value  = mixed value.
+ * $exp    = OPTIONAL; expire time  by seconds (integer). default is 0 ( disabled expire).
+ * $result = boolean, when success to set returns true, or when failed returns false.
+ *
+ * $result = $kvs->set<KeyName>( $value, $exp );
+ *
+ *
+ * [ GET the value by key name ]
+ * If you want to get $value from key name of <KeyName>
+ * $value = mixed value when you set before, or failed, returns false.
+ *
+ * $value = $kvs->get<KeyName>();
+ *
+ * If you specify the first parameter, you can chose value in <KeyName> values.
+ * however this option only enabled when the value of array.
+ *
+ *
+ *
+ * [ APPEND the value for key name ]
+ * If you want to apped $value to existing key name of <KeyName>, You can append
+ * the value specified it.
+ *
+ * $value  = mixed value.
+ * $exp    = OPTIONAL; expire time  by seconds (integer). default is 0 ( disabled expire).
+ * $result = boolean, when success to set returns true, or when failed returns false.
+ *
+ *
+ * [ REMOVE the specified index of values into key name ]
+ * If you want to remove the specified index of values into existing key name of <KeyName>.
+ *
+ * $index  = index key of values.
+ * $result = boolean, when success to set returns true, or when failed returns false.
+ *
+ * $result $kvs->remove<KeyName>( $index );
+ *
+ *
+ *
+ * [ PULL the specified index of values into key name ]
+ * If you want to pull ( to get and remove the value ) the specified index of values into existing key name of <KeyName>.
+ *
+ * $index  = index key of values.
+ * $value  = mixed value when you set before, or failed, returns false.
+ *
+ * $result $kvs->pull<KeyName>( $index );
+ *
+ *
+ * [ INCREMENT the value to key name ]
+ * If you want increment value to existing key name of <KeyName>.
+ *
+ * $index  = index key of values.
+ * $result = boolean, when success to set returns true, or when failed returns false.
+ *
+ * $result $kvs->increment<KeyName>( $index );
+ *
+ *
+ *
+ * [ DECREMENT the value from key name ]
+ * If you want decrement from existing key name of <KeyName>.
+ *
+ * $value  = decremented value
+ *
+ * $result $kvs->decrement<KeyName>( $index );
+ *
+ * anon <anon@anoncom.net>
+ */
 abstract class My_KeyValueStore_Adapter_Abstract {
 	
 	/**
@@ -8,16 +81,16 @@ abstract class My_KeyValueStore_Adapter_Abstract {
 	 * @var array
 	 */
 	protected static $_methodPrefixes = array(
-			'set',			// キーに値を設定または上書き
-			'get',			// キーから値を取得
-			'append',		// キー内の値に指定の値を追記
-			'remove',		// キー内の値から特定のインデックスのデータを削除
-			'pull',			// キー内の値から特定のインデックスのデータを取り出す（取得しつつ削除）
-			'fetch',		// キーから特定の範囲の値を取得
-			'fetchAll',		// キーからすべての値を取得（getと同様）
-			'increment',	// キーに値をインクリメント
-			'decrement',	// キーから値をデクリメントする
-			'drop',			// キーを削除
+		'set',			// キーに値を設定または上書き
+		'get',			// キーから値を取得
+		'append',		// キー内の値に指定の値を追記
+		'remove',		// キー内の値から特定のインデックスのデータを削除
+		'pull',			// キー内の値から特定のインデックスのデータを取り出す（取得しつつ削除）
+		'fetch',		// キーから特定の範囲の値を取得
+		'fetchAll',		// キーからすべての値を取得（getと同様）
+		'increment',	// キーに値をインクリメント
+		'decrement',	// キーから値をデクリメントする
+		'drop',			// キーを削除
 	);
 	
 	/**
@@ -25,14 +98,14 @@ abstract class My_KeyValueStore_Adapter_Abstract {
 	 * @var array
 	 */
 	protected static $_argumentNames = array(
-			'set'		=> array( 'value', 'expiration', ),
-			'get'		=> array( 'index' ),
-			'append'	=> array( 'value', 'expiration' ),
-			'remove'	=> array( 'index' ),
-			'pull'		=> array( 'index' ),
-			'fethch'	=> array( 'fetch', 'offset' ),
-			'increment'	=> array( 'offset' ),
-			'decrement'	=> array( 'offset' ),
+		'set'		=> array( 'value', 'expiration', ),
+		'get'		=> array( 'index' ),
+		'append'	=> array( 'value', 'expiration' ),
+		'remove'	=> array( 'index' ),
+		'pull'		=> array( 'index' ),
+		'fethch'	=> array( 'fetch', 'offset' ),
+		'increment'	=> array( 'offset' ),
+		'decrement'	=> array( 'offset' ),
 	);
 	
 	
@@ -84,7 +157,7 @@ abstract class My_KeyValueStore_Adapter_Abstract {
 	 * Connection object
 	 * @var object
 	 */
-	protected $_connection = null;
+	protected static $_connection = null;
 	
 	/**
 	 * Constructor

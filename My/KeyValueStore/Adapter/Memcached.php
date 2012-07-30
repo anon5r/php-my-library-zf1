@@ -1,6 +1,11 @@
 <?php
 require_once 'My/KeyValueStore/Adapter/Abstract.php';
 
+/**
+ * Simplify and basicaly operate interface for Memcached
+ * @see http://jp2.php.net/memcached
+ * @author anon <anon@anoncom.net>
+ */
 class My_KeyValueStore_Adapter_Memcached extends My_KeyValueStore_Adapter_Abstract {
 	
 	/**
@@ -10,11 +15,6 @@ class My_KeyValueStore_Adapter_Memcached extends My_KeyValueStore_Adapter_Abstra
      * @throws My_KeyValueStore_Exception
 	 */
 	public function _connect() {
-		
-		if ( $this->_connection != null ) {
-			return;
-		}
-		
 		if ( extension_loaded( 'memcached' ) == false ) {
 			throw new My_KeyValueStore_Exception( 'The Memcached extension is required for this adapter but the extension is not loaded' );
 		}
@@ -22,10 +22,14 @@ class My_KeyValueStore_Adapter_Memcached extends My_KeyValueStore_Adapter_Abstra
 			throw new My_KeyValueStore_Exception( 'PHP Mecached driver does not loaded.' );
 		}
 		
+		if ( self::$_connection != null && self::$_connection instanceof Memcached ) {
+			return;
+		}
+			
 		$instanceHash = sprintf( 'memcached://%s:%d', $this->_host, $this->_port );
-		$this->_connection = new Memcached( $instanceHash );
-		$this->_connection->addServer( $this->_host, $this->_port );
-		$this->_connection->setOption( Memcached::OPT_POLL_TIMEOUT, $this->_timeout );
+		self::$_connection = new Memcached( $instanceHash );
+		self::$_connection->addServer( $this->_host, $this->_port );
+		self::$_connection->setOption( Memcached::OPT_POLL_TIMEOUT, $this->_timeout );
 	}
 	
 	/**
@@ -46,7 +50,7 @@ class My_KeyValueStore_Adapter_Memcached extends My_KeyValueStore_Adapter_Abstra
 	protected function _setBase( $name, array $arguments = null ) {
 		extract( self::_convertArguments( 'set', $arguments ) );
 		$this->_connect();
-		return $this->_connection->set( $name, $value );
+		return self::$_connection->set( $name, $value );
 	}
 	
 	/**
@@ -60,8 +64,8 @@ class My_KeyValueStore_Adapter_Memcached extends My_KeyValueStore_Adapter_Abstra
 			extract( self::_convertArguments( 'get', $arguments ) );
 		}
 		$this->_connect();
-		$values = $this->_connection->get( $name );
-		if ( $values === false && $this->_connection->getResultCode() == Memcached::RES_NOTFOUND ) {
+		$values = self::$_connection->get( $name );
+		if ( $values === false && self::$_connection->getResultCode() == Memcached::RES_NOTFOUND ) {
 			// キーが見つからなかったと判定された判定の場合
 			require_once 'My/KeyValueStore/Exception.php';
 			throw new My_KeyValueStore_Exception( 'Specified key name "' . $name . '" does not found', Memcached::RES_NOTFOUND );
@@ -274,13 +278,13 @@ class My_KeyValueStore_Adapter_Memcached extends My_KeyValueStore_Adapter_Abstra
 		$counter = 0;
 		
 		$this->_connect();
-		if ( method_exists( $this->_connection, 'increment' ) ) {
-			$counter = $this->_connection->increment( $name, $offset );
+		if ( method_exists( self::$_connection, 'increment' ) ) {
+			$counter = self::$_connection->increment( $name, $offset );
 			if ( $counter === false ) {
 				$counter = 0;
-				if ( $this->_connection->getResultCode() == Memcached::RES_NOTFOUND ) {
+				if ( self::$_connection->getResultCode() == Memcached::RES_NOTFOUND ) {
 					$counter = ( 0 + $offset );
-					$this->_connection->set( $name, $counter, 0 );
+					self::$_connection->set( $name, $counter, 0 );
 				}
 			}
 		} else {
@@ -310,13 +314,13 @@ class My_KeyValueStore_Adapter_Memcached extends My_KeyValueStore_Adapter_Abstra
 		$counter = 0;
 		
 		$this->_connect();
-		if ( method_exists( $this->_connection, 'decrement' ) ) {
-			$counter = $this->_connection->decrement( $name, $offset );
+		if ( method_exists( self::$_connection, 'decrement' ) ) {
+			$counter = self::$_connection->decrement( $name, $offset );
 			if ( $counter === false ) {
 				$count = 0;
-				if ( $this->_connection->getResultCode() == Memcached::RES_NOTFOUND ) {
+				if ( self::$_connection->getResultCode() == Memcached::RES_NOTFOUND ) {
 					$counter = ( 0 - $offset );
-					$this->_connection->set( $name, $counter, 0 );
+					self::$_connection->set( $name, $counter, 0 );
 				}
 			}
 		} else {
@@ -336,6 +340,6 @@ class My_KeyValueStore_Adapter_Memcached extends My_KeyValueStore_Adapter_Abstra
 	 */
 	protected function _dropBase( $name, array $arguments = null ) {
 		$this->_connect();
-		return $this->_connection->delete( $name );
+		return self::$_connection->delete( $name );
 	}
 }
