@@ -154,6 +154,12 @@ abstract class My_KeyValueStore_Adapter_Abstract {
 	
 	
 	/**
+	 * Connection instances pool
+	 * @var array
+	 */
+	protected static $_pool = array();
+	
+	/**
 	 * Connection object
 	 * @var object
 	 */

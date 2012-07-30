@@ -15,6 +15,7 @@ class My_KeyValueStore_Adapter_Memcached extends My_KeyValueStore_Adapter_Abstra
      * @throws My_KeyValueStore_Exception
 	 */
 	public function _connect() {
+		
 		if ( extension_loaded( 'memcached' ) == false ) {
 			throw new My_KeyValueStore_Exception( 'The Memcached extension is required for this adapter but the extension is not loaded' );
 		}
@@ -22,14 +23,19 @@ class My_KeyValueStore_Adapter_Memcached extends My_KeyValueStore_Adapter_Abstra
 			throw new My_KeyValueStore_Exception( 'PHP Mecached driver does not loaded.' );
 		}
 		
-		if ( self::$_connection != null && self::$_connection instanceof Memcached ) {
+		$instanceHash = sprintf( 'memcached://%s:%d', $this->_host, $this->_port );
+		
+		// already having instances for this connection
+		if ( isset( self::$_pool[ $instanceHash ] ) == true && self::$_pool[ $instanceHash ] instanceof Memcached ) {
+			self::$_connection = self::$_pool[ $instanceHash ];
 			return;
 		}
-			
-		$instanceHash = sprintf( 'memcached://%s:%d', $this->_host, $this->_port );
+		
+		
 		self::$_connection = new Memcached( $instanceHash );
 		self::$_connection->addServer( $this->_host, $this->_port );
 		self::$_connection->setOption( Memcached::OPT_POLL_TIMEOUT, $this->_timeout );
+		self::$_pool[ $instanceHash ] = self::$_connection;
 	}
 	
 	/**

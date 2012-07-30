@@ -15,21 +15,25 @@ class My_KeyValueStore_Adapter_Redis extends My_KeyValueStore_Adapter_Abstract {
      * @throws My_KeyValueStore_Exception
 	 */
 	protected function _connect() {
+		
 		if ( extension_loaded( 'redis' ) == false ) {
 			throw new My_KeyValueStore_Exception( 'The Redis extension is required for this adapter but the extension is not loaded' );
 		}
-		
 		if ( class_exists( 'Redis' ) == false ) {
 			throw new My_KeyValueStore_Exception( 'PHP Redis driver does not loaded.' );
 		}
-
-		if ( self::$_connection != null && self::$_connection instanceof Redis ) {
+		
+		$instanceHash = sprintf( 'redis://%s:%d', $this->_host, $this->_port );
+		
+		if ( isset( self::$_pool[ $instanceHash ] ) == true && self::$_pool[ $instanceHash ] instanceof Redis ) {
+			self::$_connection = self::$_pool[ $instanceHash ];
 			return;
 		}
 		
 		self::$_connection = new Redis;
 		self::$_connection->pconnect( $this->_host, $this->_port, $this->_timeout );
 		self::$_connection->setOption( Redis::OPT_SERIALIZER, Redis::SERIALIZER_PHP );
+		self::$_pool[ $instanceHash ] = self::$_connection;
 	}
 	
 	/**
