@@ -15,9 +15,9 @@ class My_KeyValueStore_Adapter_Redis extends My_KeyValueStore_Adapter_Abstract {
      * @throws My_KeyValueStore_Exception
 	 */
 	protected function _connect() {
-		
+
 		if ( extension_loaded( 'redis' ) == false ) {
-			throw new My_KeyValueStore_Exception( 'The Redis extension is required for this adapter but the extension is not loaded' );
+			throw new My_KeyValueStore_Exception( 'The Redis extension is required for ' . get_class( self ) . ' adapter but the extension is not loaded. Please see following URL: https://github.com/nicolasff/phpredis , and then install it.', My_KeyValueStore_Exception::CODE_EXTENSION_UNAVAILABLE );
 		}
 		if ( class_exists( 'Redis' ) == false ) {
 			throw new My_KeyValueStore_Exception( 'PHP Redis driver does not loaded.' );
@@ -198,8 +198,8 @@ class My_KeyValueStore_Adapter_Redis extends My_KeyValueStore_Adapter_Abstract {
 			
 			$values = $this->_getBase( $name, null );
 			if ( $values instanceof ArrayIterator == false && is_array( $values ) == false ) {
-				require_once 'Recs/Apps/KeyValueStore/Exception.php';
-				throw new Recs_Apps_KeyValueStore_Exception( 'Specified key having value could not remove by index.' );
+				require_once 'My/KeyValueStore/Exception.php';
+				throw new My_KeyValueStore_Exception( 'Specified key having value could not remove by index.' );
 			}
 			if ( $values instanceof ArrayIterator ) {
 				if ( $values->offsetExists( $index ) == false ) {

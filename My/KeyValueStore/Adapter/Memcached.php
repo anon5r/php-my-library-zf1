@@ -17,10 +17,10 @@ class My_KeyValueStore_Adapter_Memcached extends My_KeyValueStore_Adapter_Abstra
 	public function _connect() {
 		
 		if ( extension_loaded( 'memcached' ) == false ) {
-			throw new My_KeyValueStore_Exception( 'The Memcached extension is required for this adapter but the extension is not loaded' );
+			throw new My_KeyValueStore_Exception( 'The Memcached extension is required for this adapter but the extension is not loaded', My_KeyValueStore_Exception::CODE_EXTENSION_UNAVAILABLE );
 		}
 		if ( class_exists( 'Memcached' ) == false ) {
-			throw new My_KeyValueStore_Exception( 'PHP Mecached driver does not loaded.' );
+			throw new My_KeyValueStore_Exception( 'PHP Mecached driver does not loaded.', My_KeyValueStore_Exception::CODE_CLASS_NOTEXIST );
 		}
 		
 		$instanceHash = sprintf( 'memcached://%s:%d', $this->_host, $this->_port );
@@ -30,7 +30,6 @@ class My_KeyValueStore_Adapter_Memcached extends My_KeyValueStore_Adapter_Abstra
 			self::$_connection = self::$_pool[ $instanceHash ];
 			return;
 		}
-		
 		
 		self::$_connection = new Memcached( $instanceHash );
 		self::$_connection->addServer( $this->_host, $this->_port );
