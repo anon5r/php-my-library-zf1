@@ -1,6 +1,11 @@
 <?php
 require_once 'My/KeyValueStore/Adapter/Abstract.php';
 
+/**
+ * Simplify and basicaly operate interface for Redis
+ * @see https://github.com/nicolasff/phpredis
+ * @author anon <anon@anoncom.net>
+ */
 class My_KeyValueStore_Adapter_Redis extends My_KeyValueStore_Adapter_Abstract {
 	
 	/**
@@ -10,21 +15,25 @@ class My_KeyValueStore_Adapter_Redis extends My_KeyValueStore_Adapter_Abstract {
      * @throws My_KeyValueStore_Exception
 	 */
 	protected function _connect() {
-		
-		if ( $this->_connection != null ) {
-			return;
-		}
-		
+
 		if ( extension_loaded( 'redis' ) == false ) {
-			throw new My_KeyValueStore_Exception( 'The Redis extension is required for this adapter but the extension is not loaded' );
+			throw new My_KeyValueStore_Exception( 'The Redis extension is required for ' . get_class( self ) . ' adapter but the extension is not loaded. Please see following URL: https://github.com/nicolasff/phpredis , and then install it.', My_KeyValueStore_Exception::CODE_EXTENSION_UNAVAILABLE );
 		}
-		
 		if ( class_exists( 'Redis' ) == false ) {
 			throw new My_KeyValueStore_Exception( 'PHP Redis driver does not loaded.' );
 		}
-		$this->_connection = new Redis;
-		$this->_connection->pconnect( $this->_host, $this->_port, $this->_timeout );
-		$this->_connection->setOption( Redis::OPT_SERIALIZER, Redis::SERIALIZER_PHP );
+		
+		$instanceHash = sprintf( 'redis://%s:%d', $this->_host, $this->_port );
+		
+		if ( isset( self::$_pool[ $instanceHash ] ) == true && self::$_pool[ $instanceHash ] instanceof Redis ) {
+			self::$_connection = self::$_pool[ $instanceHash ];
+			return;
+		}
+		
+		self::$_connection = new Redis;
+		self::$_connection->pconnect( $this->_host, $this->_port, $this->_timeout );
+		self::$_connection->setOption( Redis::OPT_SERIALIZER, Redis::SERIALIZER_PHP );
+		self::$_pool[ $instanceHash ] = self::$_connection;
 	}
 	
 	/**
@@ -47,9 +56,9 @@ class My_KeyValueStore_Adapter_Redis extends My_KeyValueStore_Adapter_Abstract {
 		extract( self::_convertArguments( 'set', $arguments ) );
 		$this->_connect();
 		if ( isset( $expiration ) && $expiration != null && method_exists( $this, 'setex' ) ) {
-			return $this->_connection->setex( $name, $expiration, $value );
+			return self::$_connection->setex( $name, $expiration, $value );
 		}
-		return $this->_connection->set( $name, $value );
+		return self::$_connection->set( $name, $value );
 	}
 	
 	/**
@@ -63,7 +72,7 @@ class My_KeyValueStore_Adapter_Redis extends My_KeyValueStore_Adapter_Abstract {
 			extract( self::_convertArguments( 'get', $arguments ) );
 		}
 		$this->_connect();
-		$values = $this->_connection->get( $name );
+		$values = self::$_connection->get( $name );
 		if ( $arguments != null && isset( $index ) == true ) {
 			// index指定がある場合
 			if ( isset( $values[ $index ] ) == false ) {
@@ -93,33 +102,39 @@ class My_KeyValueStore_Adapter_Redis extends My_KeyValueStore_Adapter_Abstract {
 		}
 		
 		$this->_connect();
-		$values = $this->_getBase( $name, null );
-		if ( $values instanceof ArrayIterator == false && is_array( $values ) == false ) {
-			require_once 'My/KeyValueStore/Exception.php';
-			throw new My_KeyValueStore_Exception( 'Specified key having value is not array or unsupported append method.' );
-		}
-		if ( $values instanceof ArrayIterator ) {
-			$values->append( $value );
-		} elseif ( is_array( $values ) == true || $values == null ) {
-			if ( method_exists( $this, ( '_getAppendKey' ) ) ) {
-				// _getAppendKeyというメソッドが実装されていれば、そこからキーを取得する
-				$appendKey = $this->_getAppendKey( $name, $userId );
-				if ( $appendKey === false || $appendKey == null ) {
-					require_once 'My/KeyValueStore/Exception.php';
-					throw new My_KeyValueStore_Exception( 'Appending key name does not get.' );
-				}
-				$values[ $appendKey ] = $value;
-			} else {
-				// 無ければ現在の配列に追記する
-				$values[] = $value;
+		
+		$result = self::$_connection->rPush( $name, $value );
+		if ( $resut == false ) {
+			$values = $this->_getBase( $name, null );
+			if ( $values instanceof ArrayIterator == false && is_array( $values ) == false ) {
+				require_once 'My/KeyValueStore/Exception.php';
+				throw new My_KeyValueStore_Exception( 'Specified key having value is not array or unsupported append method.' );
 			}
-		}
-		// _setBase 実行用パラメータ生成
-		$setArgs = array(
+			if ( $values instanceof ArrayIterator ) {
+				$values->append( $value );
+			} elseif ( is_array( $values ) == true || $values == null ) {
+				if ( method_exists( $this, ( '_getAppendKey' ) ) ) {
+					// _getAppendKeyというメソッドが実装されていれば、そこからキーを取得する
+					$appendKey = $this->_getAppendKey( $name, $userId );
+					if ( $appendKey === false || $appendKey == null ) {
+						require_once 'My/KeyValueStore/Exception.php';
+						throw new My_KeyValueStore_Exception( 'Appending key name does not get.' );
+					}
+					$values[ $appendKey ] = $value;
+				} else {
+					// 無ければ現在の配列に追記する
+					$values[] = $value;
+				}
+			}
+			// _setBase 実行用パラメータ生成
+			$setArgs = array(
 				$values,
 				$expiration,
-		);
-		return $this->_setBase( $name, $setArgs );
+			);
+			$result = $this->_setBase( $name, $setArgs );
+		}
+		
+		return $result;
 	}
 	
 	/**
@@ -156,8 +171,8 @@ class My_KeyValueStore_Adapter_Redis extends My_KeyValueStore_Adapter_Abstract {
 		}
 		// _setBase 実行用パラメータ生成
 		$setArgs = array(
-				$values,
-				$expiration,
+			$values,
+			$expiration,
 		);
 		return $this->_setBase( $name, $setArgs );
 	}
@@ -177,34 +192,39 @@ class My_KeyValueStore_Adapter_Redis extends My_KeyValueStore_Adapter_Abstract {
 			require_once 'My/KeyValueStore/Exception.php';
 			throw new My_KeyValueStore_Exception( 'Pull index does not specified.' );
 		}
-		$values = $this->_getBase( $name, null );
-		if ( $values instanceof ArrayIterator == false && is_array( $values ) == false ) {
-			require_once 'My/KeyValueStore/Exception.php';
-			throw new My_KeyValueStore_Exception( 'Specified key having value could not remove by index.' );
-		}
-		if ( $values instanceof ArrayIterator ) {
-			if ( $values->offsetExists( $index ) == false ) {
+		$pullValue = self::$_connection->lPop( $name );
+		
+		if ( $result == false ) {
+			
+			$values = $this->_getBase( $name, null );
+			if ( $values instanceof ArrayIterator == false && is_array( $values ) == false ) {
 				require_once 'My/KeyValueStore/Exception.php';
-				throw new My_KeyValueStore_Exception( 'Specified index does not find.' );
+				throw new My_KeyValueStore_Exception( 'Specified key having value could not remove by index.' );
 			}
-			$pullValue = $values->offsetGet( $index );
-			$values->offsetUnset( $index );
-		} elseif ( is_array( $values ) == true ) {
-			if ( isset( $values[ $index ] ) == false ) {
-				require_once 'My/KeyValueStore/Exception.php';
-				throw new My_KeyValueStore_Exception( 'Specified index does not find.' );
+			if ( $values instanceof ArrayIterator ) {
+				if ( $values->offsetExists( $index ) == false ) {
+					require_once 'My/KeyValueStore/Exception.php';
+					throw new My_KeyValueStore_Exception( 'Specified index does not find.' );
+				}
+				$pullValue = $values->offsetGet( $index );
+				$values->offsetUnset( $index );
+			} elseif ( is_array( $values ) == true ) {
+				if ( isset( $values[ $index ] ) == false ) {
+					require_once 'My/KeyValueStore/Exception.php';
+					throw new My_KeyValueStore_Exception( 'Specified index does not find.' );
+				}
+				$pullValue = $values[ $index ];
+				unset( $values[ $index ] );
 			}
-			$pullValue = $values[ $index ];
-			unset( $values[ $index ] );
-		}
-		// _setBase 実行用パラメータ生成
-		$setArgs = array(
+			// _setBase 実行用パラメータ生成
+			$setArgs = array(
 				$values,
 				$expiration,
-		);
-		if ( $this->_setBase( $name, $setArgs ) == false ) {
-			require_once 'My/KeyValueStore/Exception.php';
-			throw new My_KeyValueStore_Exception( 'Failed to set values to key' );
+			);
+			if ( $this->_setBase( $name, $setArgs ) == false ) {
+				require_once 'My/KeyValueStore/Exception.php';
+				throw new My_KeyValueStore_Exception( 'Failed to set values to key' );
+			}
 		}
 		return $pullValue;
 	}
@@ -271,9 +291,9 @@ class My_KeyValueStore_Adapter_Redis extends My_KeyValueStore_Adapter_Abstract {
 		
 		$this->_connect();
 		if ( isset( $offset ) == false || $offset == null ) {
-			$counter = $this->_connection->incr( $name );
+			$counter = self::$_connection->incr( $name );
 		} else {
-			$counter = $this->_connection->incrBy( $name, $offset );
+			$counter = self::$_connection->incrBy( $name, $offset );
 		}
 		return $counter;
 	}
@@ -295,9 +315,9 @@ class My_KeyValueStore_Adapter_Redis extends My_KeyValueStore_Adapter_Abstract {
 		
 		$this->_connect();
 		if ( isset( $offset ) ==false || $offset == null ) {
-			$counter = $this->_connection->decr( $name );
+			$counter = self::$_connection->decr( $name );
 		} else {
-			$counter = $this->_connection->decrBy( $name, $offset );
+			$counter = self::$_connection->decrBy( $name, $offset );
 		}
 		return $counter;
 	}
@@ -310,6 +330,6 @@ class My_KeyValueStore_Adapter_Redis extends My_KeyValueStore_Adapter_Abstract {
 	 */
 	protected function _dropBase( $name, array $arguments = null ) {
 		$this->_connect();
-		return $this->_connection->delete( $name );
+		return self::$_connection->delete( $name );
 	}
 }
