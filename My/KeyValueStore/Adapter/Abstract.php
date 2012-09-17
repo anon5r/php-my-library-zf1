@@ -4,7 +4,7 @@ require_once 'My/Utility.php';
  * Simplify and basicaly operate interface adapter abstract class
  * for various key value store
  *
- * $kvs = Recs_Apps_KeyValueStore::factory( $configs );
+ * $kvs = My_KeyValueStore::factory( $configs );
  *
  * [ SET the value for key name ]
  * If you want to set $value to key name of <KeyName>
@@ -154,6 +154,12 @@ abstract class My_KeyValueStore_Adapter_Abstract {
 	
 	
 	/**
+	 * Allow only to use specified keys
+	 * @var array
+	 */
+	protected $_allowedKeys = array();
+	
+	/**
 	 * Connection instances pool
 	 * @var array
 	 */
@@ -188,6 +194,8 @@ abstract class My_KeyValueStore_Adapter_Abstract {
 	 */
 	public function __construct( array $config ) {
 		
+		$this->_checkExtension();
+		
 		if ( isset( $config[ 'host' ] ) == false ) {
 			require_once 'My/KeyValueStore/Exception.php';
 			throw new My_KeyValueStore_Exception( 'Configuration array must have a key for "host" that names the key value store instance.' );
@@ -211,12 +219,28 @@ abstract class My_KeyValueStore_Adapter_Abstract {
 	}
 	
 	/**
+	 * Check using extension
+	 * @return bool
+	 */
+	abstract protected function _checkExtension();
+	
+	/**
 	 * Creates a connection to the key value store.
 	 *
 	 * @return void
 	 */
 	abstract protected function _connect();
 	
+	
+	/**
+	 * Set allowed keys list
+	 * @param array $keys
+	 * @return My_KeyValueStore
+	 */
+	public function _setAllowKeys( array $keys ) {
+		$this->_allowedKeys = $keys;
+		return $this;
+	}
 	
 	/**
 	 * Set the delimiter character to concatenates a prefix appended to the key name
@@ -319,6 +343,38 @@ abstract class My_KeyValueStore_Adapter_Abstract {
 	}
 	
 	/**
+	 * Add allowed key to list
+	 * @param mixed $key
+	 * @return My_KeyValueStore
+	 */
+	public function _addAllowKeys( $key ) {
+		$this->_allowedKeys[] = $key;
+		return $this;
+	}
+	
+	/**
+	 * Check the key allowed specified keys
+	 * @param string $key
+	 * @return bool
+	 */
+	protected function _isAllowed( $key ) {
+		if ( count( $this->_allowedKeys ) > 0 ) {
+			return isset( $this->_allowdKeys[ $key ] );
+		}
+		return true;
+	}
+	
+	/**
+	 * Set allowed keys list
+	 * @param array $keys
+	 * @return My_KeyValueStore
+	 */
+	public function _setAllowKeys( array $keys ) {
+		$this->_allowedKeys = $keys;
+		return $this;
+	}
+	
+	/**
 	 * KeyValue control method
 	 * @param string $name method name
 	 * @param array $arguments method arguments
@@ -330,7 +386,12 @@ abstract class My_KeyValueStore_Adapter_Abstract {
 		foreach ( self::$_methodPrefixes as $prefix ) {
 			if ( My_Utility::startsWith( $name, $prefix ) ) {
 				$keyName = substr( $name, strlen( $prefix ) );
-	
+				
+				if ( $this->_isAllowed( $keyName ) == false ) {
+					require_once 'My/KeyValueStore/Exception.php';
+					throw new My_KeyValueStore_Exception( 'Specified key "' . $keyName . '" does not allowed on this class.', My_KeyValueStore_Exception::CODE_KEY_NOT_ALLOWED_KEY );
+				}
+				
 				if ( is_array( $this->_keyPrefix ) && count( $this->_keyPrefix ) > 0 ) {
 					// キー接頭辞が設定されている場合は、キー名の接頭辞に追加する
 					$keyName = implode( $this->_keyPrefixDelimiter, $this->_keyPrefix ) . $this->_keyPrefixDelimiter . $keyName;

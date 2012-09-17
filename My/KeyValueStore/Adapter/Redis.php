@@ -9,6 +9,24 @@ require_once 'My/KeyValueStore/Adapter/Abstract.php';
 class My_KeyValueStore_Adapter_Redis extends My_KeyValueStore_Adapter_Abstract {
 	
 	/**
+	 * Check using extension
+	 * @return bool
+	 */
+	protected function _checkExtension() {
+		
+		if ( extension_loaded( 'redis' ) == false ) {
+			require_once 'My/KeyValueStore/Exception.php';
+			throw new My_KeyValueStore_Exception( 'The Redis extension is required for ' . get_class( self ) . ' adapter but the extension is not loaded. Please see following URL: https://github.com/nicolasff/phpredis , and then install it.', My_KeyValueStore_Exception::CODE_EXTENSION_UNAVAILABLE );
+		}
+		if ( class_exists( 'Redis' ) == false ) {
+			require_once 'My/KeyValueStore/Exception.php';
+			throw new My_KeyValueStore_Exception( '"Redis" class does not loaded. Please check to been loading it.', My_KeyValueStore_Exception::CODE_CLASS_NOTEXIST );
+		}
+		
+		return true;
+	}
+	
+	/**
 	 * Creates a Redis object and connects to the key value store.
      *
      * @return void
