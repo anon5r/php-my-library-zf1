@@ -81,16 +81,16 @@ abstract class My_KeyValueStore_Adapter_Abstract {
 	 * @var array
 	 */
 	protected static $_methodPrefixes = array(
-		'set',			// キーに値を設定または上書き
-		'get',			// キーから値を取得
-		'append',		// キー内の値に指定の値を追記
-		'remove',		// キー内の値から特定のインデックスのデータを削除
-		'pull',			// キー内の値から特定のインデックスのデータを取り出す（取得しつつ削除）
-		'fetch',		// キーから特定の範囲の値を取得
-		'fetchAll',		// キーからすべての値を取得（getと同様）
-		'increment',	// キーに値をインクリメント
-		'decrement',	// キーから値をデクリメントする
-		'drop',			// キーを削除
+		'set',			// Set or overwrite value to the key
+		'get',			// Get value from the key
+		'append',		// Append to value to the values into the key
+		'remove',		// Remove the value having specific index from the key
+		'pull',			// Pull the value having specific index from the key
+		'fetch',		// Fetch the values within a given index from the key
+		'fetchAll',		// Fetch all values from the key (Same as "get")
+		'increment',	// Increment value to the key
+		'decrement',	// Decrement value from the key 
+		'drop',			// Drop the key and value
 	);
 	
 	/**
