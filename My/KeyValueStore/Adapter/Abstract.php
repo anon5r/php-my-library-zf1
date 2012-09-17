@@ -238,7 +238,7 @@ abstract class My_KeyValueStore_Adapter_Abstract {
 	 * @param mixed $key
 	 * @return My_KeyValueStore
 	 */
-	public function _addAllowKeys( $key ) {
+	public function _addAllowKey( $key ) {
 		$this->_allowedKeys[] = $key;
 		return $this;
 	}
