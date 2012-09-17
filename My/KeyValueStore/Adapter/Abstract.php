@@ -232,6 +232,29 @@ abstract class My_KeyValueStore_Adapter_Abstract {
 	abstract protected function _connect();
 	
 	
+	
+	/**
+	 * Add allowed key to list
+	 * @param mixed $key
+	 * @return My_KeyValueStore
+	 */
+	public function _addAllowKeys( $key ) {
+		$this->_allowedKeys[] = $key;
+		return $this;
+	}
+	
+	/**
+	 * Check the key allowed specified keys
+	 * @param string $key
+	 * @return bool
+	 */
+	protected function _isAllowed( $key ) {
+		if ( count( $this->_allowedKeys ) > 0 ) {
+			return isset( $this->_allowdKeys[ $key ] );
+		}
+		return true;
+	}
+	
 	/**
 	 * Set allowed keys list
 	 * @param array $keys
@@ -365,16 +388,6 @@ abstract class My_KeyValueStore_Adapter_Abstract {
 	}
 	
 	/**
-	 * Set allowed keys list
-	 * @param array $keys
-	 * @return My_KeyValueStore
-	 */
-	public function _setAllowKeys( array $keys ) {
-		$this->_allowedKeys = $keys;
-		return $this;
-	}
-	
-	/**
 	 * KeyValue control method
 	 * @param string $name method name
 	 * @param array $arguments method arguments
@@ -393,11 +406,11 @@ abstract class My_KeyValueStore_Adapter_Abstract {
 				}
 				
 				if ( is_array( $this->_keyPrefix ) && count( $this->_keyPrefix ) > 0 ) {
-					// キー接頭辞が設定されている場合は、キー名の接頭辞に追加する
+					// If the prefix key is set, add the prefix key name
 					$keyName = implode( $this->_keyPrefixDelimiter, $this->_keyPrefix ) . $this->_keyPrefixDelimiter . $keyName;
 				}
 				if ( is_array( $this->_keySuffix ) && count( $this->_keySuffix ) > 0 ) {
-					// キー接尾辞が設定されている場合は、キー名の接尾辞に追加する
+					// If the suffix key is set, add the suffix key name
 					$keyName .= $this->_keySuffixDelimiter . implode( $this->_keySuffixDelimiter, $this->_keySuffix );
 				}
 				$baseMethod = sprintf( '_%sBase', $prefix );
