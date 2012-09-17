@@ -2,57 +2,51 @@
 require_once 'My/KeyValueStore/Adapter/Abstract.php';
 
 /**
- * Simplify and basicaly operate interface for Redis
- * @see https://github.com/nicolasff/phpredis
+ * Simplify and basicaly operate interface for Memcache
+ * @see http://jp2.php.net/memcache
  * @author anon <anon@anoncom.net>
  */
-class My_KeyValueStore_Adapter_Redis extends My_KeyValueStore_Adapter_Abstract {
+class My_KeyValueStore_Adapter_Memcache extends My_KeyValueStore_Adapter_Abstract {
 	
 	/**
-	 * Creates a Redis object and connects to the key value store.
-     *
-     * @return void
-     * @throws My_KeyValueStore_Exception
+	 * Creates a Memcache object and connects to the key value store.
+	 *
+	 * @return void
+	 * @throws My_KeyValueStore_Exception
 	 */
-	protected function _connect() {
-<<<<<<< HEAD
+	public function _connect() {
 		
-		if ( extension_loaded( 'redis' ) == false ) {
-			throw new My_KeyValueStore_Exception( 'The Redis extension is required for this adapter but the extension is not loaded' );
-=======
-
-		if ( extension_loaded( 'redis' ) == false ) {
-			throw new My_KeyValueStore_Exception( 'The Redis extension is required for ' . get_class( self ) . ' adapter but the extension is not loaded. Please see following URL: https://github.com/nicolasff/phpredis , and then install it.', My_KeyValueStore_Exception::CODE_EXTENSION_UNAVAILABLE );
->>>>>>> cca4de32cc305a89fa98d555ddcb5d21c2a00c07
+		if ( extension_loaded( 'memcache' ) == false ) {
+			throw new My_KeyValueStore_Exception( 'The Memcache extension is required for this adapter but the extension is not loaded', My_KeyValueStore_Exception::CODE_EXTENSION_UNAVAILABLE );
 		}
-		if ( class_exists( 'Redis' ) == false ) {
-			throw new My_KeyValueStore_Exception( 'PHP Redis driver does not loaded.' );
+		if ( class_exists( 'Memcache' ) == false ) {
+			throw new My_KeyValueStore_Exception( 'PHP Mecache driver does not loaded.', My_KeyValueStore_Exception::CODE_CLASS_NOTEXIST );
 		}
 		
-		$instanceHash = sprintf( 'redis://%s:%d', $this->_host, $this->_port );
+		$instanceHash = sprintf( 'memcache://%s:%d', $this->_host, $this->_port );
 		
-		if ( isset( self::$_pool[ $instanceHash ] ) == true && self::$_pool[ $instanceHash ] instanceof Redis ) {
+		// already having instances for this connection
+		if ( isset( self::$_pool[ $instanceHash ] ) == true && self::$_pool[ $instanceHash ] instanceof Memcache ) {
 			self::$_connection = self::$_pool[ $instanceHash ];
 			return;
 		}
 		
-		self::$_connection = new Redis;
-		self::$_connection->pconnect( $this->_host, $this->_port, $this->_timeout );
-		self::$_connection->setOption( Redis::OPT_SERIALIZER, Redis::SERIALIZER_PHP );
+		self::$_connection = new Memcache;
+		self::$_connection->addServer( $this->_host, $this->_port );
+		self::$_connection->setServerParams( $this->_host, $this->_port, $this->_timeout, $this->_timeout, true, '_' . strtolower( __CLASS__ ) . '_failure_callback' );
 		self::$_pool[ $instanceHash ] = self::$_connection;
 	}
-	
+
 	/**
 	 * Get counter of incremented value from $name + "Count"
 	 * @param string $name
 	 */
 	protected function _getAppendKey( $name ) {
 		$offset = 1;
-		$this->_connect();
 		return $this->_incrementBase( $name, array( $offset ) );
 	}
-	
-	
+
+
 	/**
 	 * set values for specified key into key value store
 	 * @param string $name key name
@@ -61,12 +55,17 @@ class My_KeyValueStore_Adapter_Redis extends My_KeyValueStore_Adapter_Abstract {
 	protected function _setBase( $name, array $arguments = null ) {
 		extract( self::_convertArguments( 'set', $arguments ) );
 		$this->_connect();
-		if ( isset( $expiration ) && $expiration != null && method_exists( $this, 'setex' ) ) {
-			return self::$_connection->setex( $name, $expiration, $value );
+		if( isset( $expiration ) ){
+			$result = self::$_connection->set( $name, $value, $expiration );
 		}
-		return self::$_connection->set( $name, $value );
+		else{
+			$result = self::$_connection->set( $name, $value );
+		}
+
+
+		return $result;
 	}
-	
+
 	/**
 	 * get values by specified key from key value store
 	 * @param string $name key name
@@ -79,20 +78,27 @@ class My_KeyValueStore_Adapter_Redis extends My_KeyValueStore_Adapter_Abstract {
 		}
 		$this->_connect();
 		$values = self::$_connection->get( $name );
+
+		if ( $values === false ) {
+			// ÉLÅ[Ç™å©Ç¬Ç©ÇÁÇ»Ç©Ç¡ÇΩÇ∆îªíËÇ≥ÇÍÇΩîªíËÇÃèÍçá
+			require_once 'My/KeyValueStore/Exception.php';
+			throw new My_KeyValueStore_Exception( 'Specified key name "' . $name . '" does not found', My_KeyValueStore_Exception::CODE_KEY_NOTFOUND, $e );
+		}
+
 		if ( $arguments != null && isset( $index ) == true ) {
-			// indexÊåáÂÆö„Åå„ÅÇ„ÇãÂ†¥Âêà
+			// indexéwíËÇ™Ç†ÇÈèÍçá
 			if ( isset( $values[ $index ] ) == false ) {
-				// ÊåáÂÆö„Åï„Çå„Åüindex„ÅåË¶ã„Å§„Åã„Çâ„Å™„Åã„Å£„ÅüÂ†¥Âêà
+				// éwíËÇ≥ÇÍÇΩindexÇ™å©Ç¬Ç©ÇÁÇ»Ç©Ç¡ÇΩèÍçá
 				require_once 'My/KeyValueStore/Exception.php';
 				throw new My_KeyValueStore_Exception( 'Specified index does not found on the key name "' . $name . '"\'s value' );
 			}
 			$values = $values[ $index ];
 		}
-		
+
 		return $values;
 	}
-	
-	
+
+
 	/**
 	 * append values into specified key for key value store
 	 * @param string $name key name
@@ -106,43 +112,37 @@ class My_KeyValueStore_Adapter_Redis extends My_KeyValueStore_Adapter_Abstract {
 			require_once 'My/KeyValueStore/Exception.php';
 			throw new My_KeyValueStore_Exception( 'Appending value does not specified.' );
 		}
-		
+
 		$this->_connect();
-		
-		$result = self::$_connection->rPush( $name, $value );
-		if ( $resut == false ) {
-			$values = $this->_getBase( $name, null );
-			if ( $values instanceof ArrayIterator == false && is_array( $values ) == false ) {
-				require_once 'My/KeyValueStore/Exception.php';
-				throw new My_KeyValueStore_Exception( 'Specified key having value is not array or unsupported append method.' );
-			}
-			if ( $values instanceof ArrayIterator ) {
-				$values->append( $value );
-			} elseif ( is_array( $values ) == true || $values == null ) {
-				if ( method_exists( $this, ( '_getAppendKey' ) ) ) {
-					// _getAppendKey„Å®„ÅÑ„ÅÜ„É°„ÇΩ„ÉÉ„Éâ„ÅåÂÆüË£Ö„Åï„Çå„Å¶„ÅÑ„Çå„Å∞„ÄÅ„Åù„Åì„Åã„Çâ„Ç≠„Éº„ÇíÂèñÂæó„Åô„Çã
-					$appendKey = $this->_getAppendKey( $name, $userId );
-					if ( $appendKey === false || $appendKey == null ) {
-						require_once 'My/KeyValueStore/Exception.php';
-						throw new My_KeyValueStore_Exception( 'Appending key name does not get.' );
-					}
-					$values[ $appendKey ] = $value;
-				} else {
-					// ÁÑ°„Åë„Çå„Å∞ÁèæÂú®„ÅÆÈÖçÂàó„Å´ËøΩË®ò„Åô„Çã
-					$values[] = $value;
+		$values = $this->_getBase( $name, null );
+		if ( $values instanceof ArrayIterator == false && is_array( $values ) == false ) {
+			require_once 'My/KeyValueStore/Exception.php';
+			throw new My_KeyValueStore_Exception( 'Specified key having value is not array or unsupported append method.' );
+		}
+		if ( $values instanceof ArrayIterator ) {
+			$values->append( $value );
+		} elseif ( is_array( $values ) == true || $values == null ) {
+			if ( method_exists( $this, ( '_getAppendKey' ) ) ) {
+				// _getAppendKeyÇ∆Ç¢Ç§ÉÅÉ\ÉbÉhÇ™é¿ëïÇ≥ÇÍÇƒÇ¢ÇÍÇŒÅAÇªÇ±Ç©ÇÁÉLÅ[ÇéÊìæÇ∑ÇÈ
+				$appendKey = $this->_getAppendKey( $name, $userId );
+				if ( $appendKey === false || $appendKey == null ) {
+					require_once 'My/KeyValueStore/Exception.php';
+					throw new My_KeyValueStore_Exception( 'Appending key name does not get.' );
 				}
+				$values[ $appendKey ] = $value;
+			} else {
+				// ñ≥ÇØÇÍÇŒåªç›ÇÃîzóÒÇ…í«ãLÇ∑ÇÈ
+				$values[] = $value;
 			}
-			// _setBase ÂÆüË°åÁî®„Éë„É©„É°„Éº„ÇøÁîüÊàê
-			$setArgs = array(
+		}
+		// _setBase é¿çsópÉpÉâÉÅÅ[É^ê∂ê¨
+		$setArgs = array(
 				$values,
 				$expiration,
-			);
-			$result = $this->_setBase( $name, $setArgs );
-		}
-		
-		return $result;
+		);
+		return $this->_setBase( $name, $setArgs );
 	}
-	
+
 	/**
 	 * remove values into specified key for key value store
 	 * @param string $name key name
@@ -156,7 +156,8 @@ class My_KeyValueStore_Adapter_Redis extends My_KeyValueStore_Adapter_Abstract {
 			require_once 'My/KeyValueStore/Exception.php';
 			throw new My_KeyValueStore_Exception( 'Remove index does not specified.' );
 		}
-		
+
+		$this->_connect();
 		$values = $this->_getBase( $name, null );
 		if ( $values instanceof ArrayIterator == false && is_array( $values ) == false ) {
 			require_once 'My/KeyValueStore/Exception.php';
@@ -175,15 +176,15 @@ class My_KeyValueStore_Adapter_Redis extends My_KeyValueStore_Adapter_Abstract {
 			}
 			unset( $values[ $index ] );
 		}
-		// _setBase ÂÆüË°åÁî®„Éë„É©„É°„Éº„ÇøÁîüÊàê
+		// _setBase é¿çsópÉpÉâÉÅÅ[É^ê∂ê¨
 		$setArgs = array(
-			$values,
-			$expiration,
+				$values,
+				$expiration,
 		);
 		return $this->_setBase( $name, $setArgs );
 	}
-	
-	
+
+
 	/**
 	 * pull values by specified key for key value store
 	 * this method returns pulled values if it succeed.
@@ -198,49 +199,39 @@ class My_KeyValueStore_Adapter_Redis extends My_KeyValueStore_Adapter_Abstract {
 			require_once 'My/KeyValueStore/Exception.php';
 			throw new My_KeyValueStore_Exception( 'Pull index does not specified.' );
 		}
-		$pullValue = self::$_connection->lPop( $name );
-		
-		if ( $result == false ) {
-			
-			$values = $this->_getBase( $name, null );
-			if ( $values instanceof ArrayIterator == false && is_array( $values ) == false ) {
-<<<<<<< HEAD
-				require_once 'Recs/Apps/KeyValueStore/Exception.php';
-				throw new Recs_Apps_KeyValueStore_Exception( 'Specified key having value could not remove by index.' );
-=======
+		$values = $this->_getBase( $name, null );
+		if ( $values instanceof ArrayIterator == false && is_array( $values ) == false ) {
+			require_once 'My/KeyValueStore/Exception.php';
+			throw new My_KeyValueStore_Exception( 'Specified key having value could not remove by index.' );
+		}
+		if ( $values instanceof ArrayIterator ) {
+			if ( $values->offsetExists( $index ) == false ) {
 				require_once 'My/KeyValueStore/Exception.php';
-				throw new My_KeyValueStore_Exception( 'Specified key having value could not remove by index.' );
->>>>>>> cca4de32cc305a89fa98d555ddcb5d21c2a00c07
+				throw new My_KeyValueStore_Exception( 'Specified index does not find.' );
 			}
-			if ( $values instanceof ArrayIterator ) {
-				if ( $values->offsetExists( $index ) == false ) {
-					require_once 'My/KeyValueStore/Exception.php';
-					throw new My_KeyValueStore_Exception( 'Specified index does not find.' );
-				}
-				$pullValue = $values->offsetGet( $index );
-				$values->offsetUnset( $index );
-			} elseif ( is_array( $values ) == true ) {
-				if ( isset( $values[ $index ] ) == false ) {
-					require_once 'My/KeyValueStore/Exception.php';
-					throw new My_KeyValueStore_Exception( 'Specified index does not find.' );
-				}
-				$pullValue = $values[ $index ];
-				unset( $values[ $index ] );
+			$pullValue = $values->offsetGet( $index );
+			$values->offsetUnset( $index );
+		} elseif ( is_array( $values ) == true ) {
+			if ( isset( $values[ $index ] ) == false ) {
+				require_once 'My/KeyValueStore/Exception.php';
+				throw new My_KeyValueStore_Exception( 'Specified index does not find.' );
 			}
-			// _setBase ÂÆüË°åÁî®„Éë„É©„É°„Éº„ÇøÁîüÊàê
-			$setArgs = array(
+			$pullValue = $values[ $index ];
+			unset( $values[ $index ] );
+		}
+		// _setBase é¿çsópÉpÉâÉÅÅ[É^ê∂ê¨
+		$setArgs = array(
 				$values,
 				$expiration,
-			);
-			if ( $this->_setBase( $name, $setArgs ) == false ) {
-				require_once 'My/KeyValueStore/Exception.php';
-				throw new My_KeyValueStore_Exception( 'Failed to set values to key' );
-			}
+		);
+		if ( $this->_setBase( $name, $setArgs ) == false ) {
+			require_once 'My/KeyValueStore/Exception.php';
+			throw new My_KeyValueStore_Exception( 'Failed to set values to key' );
 		}
 		return $pullValue;
 	}
-	
-	
+
+
 	/**
 	 * fetch values counted by specified fetch count from specified key
 	 * @param string $name
@@ -260,20 +251,20 @@ class My_KeyValueStore_Adapter_Redis extends My_KeyValueStore_Adapter_Abstract {
 		}
 		$offset = ( int )$offset;
 		$fetch = ( $fetch < 0 ) ? 1 : $fetch;
-		
+
 		$values = $this->_getBase( $name, null );
 		if ( $values instanceof ArrayIterator == false && is_array( $values ) == false ) {
 			require_once 'My/KeyValueStore/Exception.php';
 			throw new My_KeyValueStore_Exception( 'Specified key having value could not fetch by index.' );
 		}
-		
+
 		if ( $values instanceof ArrayIterator ) {
 			return array_slice( $values->getArrayCopy(), $offset, $fetch, true );
 		} elseif ( is_array( $values ) == true ) {
 			return array_slice( $values, $offset, $fetch, true );
 		}
 	}
-	
+
 	/**
 	 * fetch all values by specified key
 	 * @param string $name
@@ -283,8 +274,8 @@ class My_KeyValueStore_Adapter_Redis extends My_KeyValueStore_Adapter_Abstract {
 		$this->_connect();
 		return $this->get( $name, null );
 	}
-	
-	
+
+
 	/**
 	 * increment value for specified key and return incremented value
 	 * @param string $name
@@ -299,16 +290,24 @@ class My_KeyValueStore_Adapter_Redis extends My_KeyValueStore_Adapter_Abstract {
 			$offset = 1;
 		}
 		$counter = 0;
-		
+
 		$this->_connect();
-		if ( isset( $offset ) == false || $offset == null ) {
-			$counter = self::$_connection->incr( $name );
+		if ( method_exists( self::$_connection, 'increment' ) ) {
+			$counter = self::$_connection->increment( $name, $offset );
+			if ( $counter === false ) {
+				$counter = 0;
+			}
 		} else {
-			$counter = self::$_connection->incrBy( $name, $offset );
+			$counter = $this->_getBase( $name, null );
+			// FIXME WARNING: signed intå^Ç…ïœä∑ÇµÇƒÇ¢ÇÈÇΩÇﬂÅAsigned intÇÃïùÇí¥Ç¶ÇÈåÖêîÇÃèÍçáÇÕÅA
+			// à»ç~åvéZÇ≥ÇÍÇ»Ç¢ÅAÇ†ÇÈÇ¢ÇÕïâÇÃêîílÇ…ïœä∑Ç≥ÇÍÇÈâ¬î\ê´Ç™Ç†ÇËÇ‹Ç∑
+			$counter = intval( $counter );
+			$counter += $offset;
+			$this->_setBase( $name, array( $counter, 0 ) );
 		}
 		return $counter;
 	}
-	
+
 	/**
 	 * decrement value for specified key and return incremented value
 	 * @param string $name
@@ -323,16 +322,22 @@ class My_KeyValueStore_Adapter_Redis extends My_KeyValueStore_Adapter_Abstract {
 			$offset = 1;
 		}
 		$counter = 0;
-		
+
 		$this->_connect();
-		if ( isset( $offset ) ==false || $offset == null ) {
-			$counter = self::$_connection->decr( $name );
+		if ( method_exists( self::$_connection, 'decrement' ) ) {
+			$counter = self::$_connection->decrement( $name, $offset );
+			if ( $counter === false ) {
+				$count = 0;
+			}
 		} else {
-			$counter = self::$_connection->decrBy( $name, $offset );
+			$counter = $this->_getBase( $name, null );
+			$counter = intval( $counter );
+			$counter -= $offset;
+			$this->_setBase( $name, array( $counter, 0 ) );
 		}
 		return $counter;
 	}
-	
+
 	/**
 	 * drop key from key value store
 	 * @param string $name
@@ -343,4 +348,10 @@ class My_KeyValueStore_Adapter_Redis extends My_KeyValueStore_Adapter_Abstract {
 		$this->_connect();
 		return self::$_connection->delete( $name );
 	}
+}
+
+function _My_keyvaluestore_adapter_memcache_failure_callback( $host, $port ) {
+	// MemcacheÉTÅ[ÉoÇ…ê⁄ë±Ç≈Ç´Ç»Ç©Ç¡ÇΩèÍçá
+	require_once 'My/KeyValueStore/Exception.php';
+	throw new My_KeyValueStore_Exception( 'Specified key name "' . $name . '" does not found', My_KeyValueStore_Exception::CODE_CONNECTION_FAILED );
 }

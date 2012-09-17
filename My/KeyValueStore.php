@@ -13,12 +13,20 @@ class My_KeyValueStore {
 	 * Factory for My_KeyValueStore_Adapter_Abstract classes.
 	 *
 	 * First argument may be a string containing the base of the adapter class
+<<<<<<< HEAD
 	 * name, e.g. 'Memcached' corresponds to class My_KeyValueStore_Memcached.  This
 	 * name is currently case-insensitive, but is not ideal to rely on this behavior.
 	 * If your class is named 'My_Company_Fallabs_KyotoTycoon', where 'My_Company' 
 	 * is the namespace and 'Fallabs_KyotoTycoon' is the adapter name, 
 	 * it is best to use the name exactly as it is defined in the class. 
 	 * This will ensure proper use of the factory API.
+=======
+	 * name, e.g. 'Mysqli' corresponds to class Zend_Db_Adapter_Mysqli.  This
+	 * name is currently case-insensitive, but is not ideal to rely on this behavior.
+	 * If your class is named 'My_Company_Pdo_Mysql', where 'My_Company' is the namespace
+	 * and 'Pdo_Mysql' is the adapter name, it is best to use the name exactly as it
+	 * is defined in the class.  This will ensure proper use of the factory API.
+>>>>>>> cca4de32cc305a89fa98d555ddcb5d21c2a00c07
 	 *
 	 * First argument may alternatively be an object of type Zend_Config.
 	 * The adapter class base name is read from the 'adapter' property.
@@ -36,33 +44,53 @@ class My_KeyValueStore {
 	 * @return My_KeyValueStore_Adapter_Abstract
 	 * @throws My_KeyValueStore_Exception
 	 */
+<<<<<<< HEAD
 	public static function factory( $config ) {
+=======
+	public static function factory( $adapter, $config ) {
+>>>>>>> cca4de32cc305a89fa98d555ddcb5d21c2a00c07
 		
 		
 		/*
 		 * Verify that adapter parameters are in an array.
 		 */
+<<<<<<< HEAD
 		if ( $config instanceof Zend_Config == false && !is_array( $config ) ) {
+=======
+		if ( !is_array( $config ) ) {
+>>>>>>> cca4de32cc305a89fa98d555ddcb5d21c2a00c07
 			/**
 			 * @see My_KeyValueStore_Exception
 			 */
 			require_once 'My/KeyValueStore/Exception.php';
+<<<<<<< HEAD
 			throw new My_KeyValueStore_Exception( 'Config parameters must be Zend_Config or in an array' );
 		}
 		
 		if ( !is_array( $config ) ) {
 			$config = $config->toArray();
+=======
+			throw new My_KeyValueStore_Exception( 'Adapter parameters must be in an array' );
+>>>>>>> cca4de32cc305a89fa98d555ddcb5d21c2a00c07
 		}
 		
 		/*
 		 * Verify that an adapter name has been specified.
 		 */
+<<<<<<< HEAD
 		if ( empty( $config[ 'adapter' ] ) || !is_string( $config[ 'adapter' ] ) ) {
+=======
+		if ( !is_string( $adapter ) || empty( $adapter ) ) {
+>>>>>>> cca4de32cc305a89fa98d555ddcb5d21c2a00c07
 			/**
 			 * @see My_KeyValueStore_Exception
 			 */
 			require_once 'My/KeyValueStore/Exception.php';
+<<<<<<< HEAD
 			throw new My_KeyValueStore_Exception( 'Adapter name must be specified to be in a string' );
+=======
+			throw new My_KeyValueStore_Exception( 'Adapter name must be specified in a string' );
+>>>>>>> cca4de32cc305a89fa98d555ddcb5d21c2a00c07
 		}
 		
 		/*
