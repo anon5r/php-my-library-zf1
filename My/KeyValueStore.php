@@ -38,7 +38,6 @@ class My_KeyValueStore {
 	 */
 	public static function factory( $config ) {
 		
-		
 		/*
 		 * Verify that adapter parameters are in an array.
 		 */
@@ -82,8 +81,8 @@ class My_KeyValueStore {
 		
 		/*
 		 * Load the adapter class.  This throws an exception
-		* if the specified class cannot be loaded.
-		*/
+		 * if the specified class cannot be loaded.
+		 */
 		if ( !class_exists( $adapterName ) ) {
 			$adapterPath = str_replace( '_', DIRECTORY_SEPARATOR, $adapterName ) . '.php';
 			
@@ -102,13 +101,13 @@ class My_KeyValueStore {
 		
 		/*
 		 * Create an instance of the adapter class.
-		* Pass the config to the adapter class constructor.
-		*/
+		 * Pass the config to the adapter class constructor.
+		 */
 		$instance = new $adapterName( $config );
 		
 		/*
 		 * Verify that the object created is a descendent of the abstract adapter type.
-		*/
+		 */
 		if (! $instance instanceof My_KeyValueStore_Adapter_Abstract ) {
 			/**
 			 * @see My_KeyValueStore_Exception
