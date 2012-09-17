@@ -9,22 +9,31 @@ require_once 'My/KeyValueStore/Adapter/Abstract.php';
 class My_KeyValueStore_Adapter_Redis extends My_KeyValueStore_Adapter_Abstract {
 	
 	/**
+	 * Check using extension
+	 * @return bool
+	 */
+	protected function _checkExtension() {
+		
+		if ( extension_loaded( 'redis' ) == false ) {
+			require_once 'My/KeyValueStore/Exception.php';
+			throw new My_KeyValueStore_Exception( 'The Redis extension is required for ' . get_class( self ) . ' adapter but the extension is not loaded. Please see following URL: https://github.com/nicolasff/phpredis , and then install it.', My_KeyValueStore_Exception::CODE_EXTENSION_UNAVAILABLE );
+		}
+		if ( class_exists( 'Redis' ) == false ) {
+			require_once 'My/KeyValueStore/Exception.php';
+			throw new My_KeyValueStore_Exception( '"Redis" class does not loaded. Please check to been loading it.', My_KeyValueStore_Exception::CODE_CLASS_NOTEXIST );
+		}
+		
+		return true;
+	}
+	
+	/**
 	 * Creates a Redis object and connects to the key value store.
      *
      * @return void
      * @throws My_KeyValueStore_Exception
 	 */
 	protected function _connect() {
-<<<<<<< HEAD
-		
-		if ( extension_loaded( 'redis' ) == false ) {
-			throw new My_KeyValueStore_Exception( 'The Redis extension is required for this adapter but the extension is not loaded' );
-=======
-
-		if ( extension_loaded( 'redis' ) == false ) {
-			throw new My_KeyValueStore_Exception( 'The Redis extension is required for ' . get_class( self ) . ' adapter but the extension is not loaded. Please see following URL: https://github.com/nicolasff/phpredis , and then install it.', My_KeyValueStore_Exception::CODE_EXTENSION_UNAVAILABLE );
->>>>>>> cca4de32cc305a89fa98d555ddcb5d21c2a00c07
-		}
+	
 		if ( class_exists( 'Redis' ) == false ) {
 			throw new My_KeyValueStore_Exception( 'PHP Redis driver does not loaded.' );
 		}
@@ -204,13 +213,8 @@ class My_KeyValueStore_Adapter_Redis extends My_KeyValueStore_Adapter_Abstract {
 			
 			$values = $this->_getBase( $name, null );
 			if ( $values instanceof ArrayIterator == false && is_array( $values ) == false ) {
-<<<<<<< HEAD
-				require_once 'Recs/Apps/KeyValueStore/Exception.php';
-				throw new Recs_Apps_KeyValueStore_Exception( 'Specified key having value could not remove by index.' );
-=======
 				require_once 'My/KeyValueStore/Exception.php';
 				throw new My_KeyValueStore_Exception( 'Specified key having value could not remove by index.' );
->>>>>>> cca4de32cc305a89fa98d555ddcb5d21c2a00c07
 			}
 			if ( $values instanceof ArrayIterator ) {
 				if ( $values->offsetExists( $index ) == false ) {

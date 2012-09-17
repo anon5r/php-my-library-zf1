@@ -9,19 +9,30 @@ require_once 'My/KeyValueStore/Adapter/Abstract.php';
 class My_KeyValueStore_Adapter_Memcache extends My_KeyValueStore_Adapter_Abstract {
 	
 	/**
+	 * Check using extension
+	 * @return bool
+	 */
+	protected function _checkExtension() {
+		
+		if ( extension_loaded( 'memcache' ) == false ) {
+			require_once 'My/KeyValueStore/Exception.php';
+			throw new My_KeyValueStore_Exception( 'The Memcache extension is required for this adapter but the extension is not loaded', My_KeyValueStore_Exception::CODE_EXTENSION_UNAVAILABLE );
+		}
+		if ( class_exists( 'Memcache' ) == false ) {
+			require_once 'My/KeyValueStore/Exception.php';
+			throw new My_KeyValueStore_Exception( 'PHP Mecache driver does not loaded.', My_KeyValueStore_Exception::CODE_CLASS_NOTEXIST );
+		}
+		
+		return true;
+	}
+	
+	/**
 	 * Creates a Memcache object and connects to the key value store.
 	 *
 	 * @return void
 	 * @throws My_KeyValueStore_Exception
 	 */
 	public function _connect() {
-		
-		if ( extension_loaded( 'memcache' ) == false ) {
-			throw new My_KeyValueStore_Exception( 'The Memcache extension is required for this adapter but the extension is not loaded', My_KeyValueStore_Exception::CODE_EXTENSION_UNAVAILABLE );
-		}
-		if ( class_exists( 'Memcache' ) == false ) {
-			throw new My_KeyValueStore_Exception( 'PHP Mecache driver does not loaded.', My_KeyValueStore_Exception::CODE_CLASS_NOTEXIST );
-		}
 		
 		$instanceHash = sprintf( 'memcache://%s:%d', $this->_host, $this->_port );
 		
@@ -90,7 +101,7 @@ class My_KeyValueStore_Adapter_Memcache extends My_KeyValueStore_Adapter_Abstrac
 			if ( isset( $values[ $index ] ) == false ) {
 				// 指定されたindexが見つからなかった場合
 				require_once 'My/KeyValueStore/Exception.php';
-				throw new My_KeyValueStore_Exception( 'Specified index does not found on the key name "' . $name . '"\'s value' );
+				throw new My_KeyValueStore_Exception( 'Specified index does not found on the key name "' . $name . '"＼'s value' );
 			}
 			$values = $values[ $index ];
 		}
@@ -351,7 +362,6 @@ class My_KeyValueStore_Adapter_Memcache extends My_KeyValueStore_Adapter_Abstrac
 }
 
 function _My_keyvaluestore_adapter_memcache_failure_callback( $host, $port ) {
-	// Memcacheサーバに接続できなかった場合
 	require_once 'My/KeyValueStore/Exception.php';
 	throw new My_KeyValueStore_Exception( 'Specified key name "' . $name . '" does not found', My_KeyValueStore_Exception::CODE_CONNECTION_FAILED );
 }
