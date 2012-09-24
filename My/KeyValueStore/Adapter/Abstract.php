@@ -1,5 +1,6 @@
 <?php
 require_once 'My/Utility.php';
+
 /**
  * Simplify and basicaly operate interface adapter abstract class
  * for various key value store
@@ -108,7 +109,11 @@ abstract class My_KeyValueStore_Adapter_Abstract {
 		'decrement'	=> array( 'offset' ),
 	);
 	
-	
+	/**
+	 * Options
+	 * @var array
+	 */
+	protected $_options = array();
 	
 	/**
 	 * Set keyword to prepend for operation key name
@@ -188,6 +193,7 @@ abstract class My_KeyValueStore_Adapter_Abstract {
 	 * persistent     => (boolean) Whether to use a persistent connection or not, defaults to false
 	 * protocol       => (string) The network protocol, defaults to TCPIP
 	 * caseFolding    => (int) style of case-alteration used for identifiers
+	 * lowerCaseKey   => (boolean) Translate using to call method by CamelCase names, and using key name lower case with underscore
 	 *
 	 * @param array $config An array having configuration data
 	 * @throws My_KeyValueStore_Exception
@@ -211,15 +217,23 @@ abstract class My_KeyValueStore_Adapter_Abstract {
 		
 		$this->_host = $config[ 'host' ];
 		$this->_port = $config[ 'port' ];
+		unset( $config[ 'host' ], $config[ 'port' ] );
 		
 		if ( isset( $config[ 'timeout' ] ) == true ) {
 			$this->_timeout = intval( $config[ 'timeout' ] );
+			unset( $config[ 'timeout' ] );
 		}
 		
+		if ( count( $config ) > 0 ) {
+			foreach (  $config as $key => $value ) {
+				$this->_options[ $key ] = $value;
+				unset( $config[ $key ] );
+			}
+		}
 	}
 	
 	/**
-	 * Check using extension
+	 * Check the using extension loading
 	 * @return bool
 	 */
 	abstract protected function _checkExtension();
@@ -400,6 +414,14 @@ abstract class My_KeyValueStore_Adapter_Abstract {
 			if ( My_Utility::startsWith( $name, $prefix ) ) {
 				$keyName = substr( $name, strlen( $prefix ) );
 				
+				if ( count( $this->_options ) > 0 ) {
+					if ( isset( $this->_options[ 'lowerCaseKey' ] ) == true ) {
+						// Convert key name to lowercase words separated with underscore
+						$keyName = preg_replace( '/[A-Z]/', '_$1', $keyName );
+						$keyName = strtolower( substr( $keyName, 1 ) );
+					}
+				}
+				
 				if ( $this->_isAllowed( $keyName ) == false ) {
 					require_once 'My/KeyValueStore/Exception.php';
 					throw new My_KeyValueStore_Exception( 'Specified key "' . $keyName . '" does not allowed on this class.', My_KeyValueStore_Exception::CODE_KEY_NOT_ALLOWED_KEY );
@@ -436,8 +458,8 @@ abstract class My_KeyValueStore_Adapter_Abstract {
 			$args[ $name ] = isset( $arguments[ $key ] ) ? $arguments[ $key ] : null;
 			unset( $arguments[ $key ] );
 		}
-		$arguments = array_values( $arguments );	// 配列を0から再整列する
-		return array_merge( $args, $arguments );	// 名前付き配列と残りの値をマージする
+		$arguments = array_values( $arguments );
+		return array_merge( $args, $arguments );
 	}
 	
 	/**
