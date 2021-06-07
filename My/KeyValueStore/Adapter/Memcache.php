@@ -91,17 +91,17 @@ class My_KeyValueStore_Adapter_Memcache extends My_KeyValueStore_Adapter_Abstrac
 		$values = self::$_connection->get( $name );
 
 		if ( $values === false ) {
-			// ƒL[‚ªŒ©‚Â‚©‚ç‚È‚©‚Á‚½‚Æ”»’è‚³‚ê‚½”»’è‚Ìê‡
+			// ã‚­ãƒ¼ãŒè¦‹ã¤ã‹ã‚‰ãªã‹ã£ãŸã¨åˆ¤å®šã•ã‚ŒãŸåˆ¤å®šã®å ´åˆ
 			require_once 'My/KeyValueStore/Exception.php';
 			throw new My_KeyValueStore_Exception( 'Specified key name "' . $name . '" does not found', My_KeyValueStore_Exception::CODE_KEY_NOTFOUND, $e );
 		}
 
 		if ( $arguments != null && isset( $index ) == true ) {
-			// indexw’è‚ª‚ ‚éê‡
+			// indexæŒ‡å®šãŒã‚ã‚‹å ´åˆ
 			if ( isset( $values[ $index ] ) == false ) {
-				// w’è‚³‚ê‚½index‚ªŒ©‚Â‚©‚ç‚È‚©‚Á‚½ê‡
+				// æŒ‡å®šã•ã‚ŒãŸindexãŒè¦‹ã¤ã‹ã‚‰ãªã‹ã£ãŸå ´åˆ
 				require_once 'My/KeyValueStore/Exception.php';
-				throw new My_KeyValueStore_Exception( 'Specified index does not found on the key name "' . $name . '"_'s value' );
+				throw new My_KeyValueStore_Exception( 'Specified index does not found on the key name "' . $name . '\'s value' );
 			}
 			$values = $values[ $index ];
 		}
@@ -134,7 +134,7 @@ class My_KeyValueStore_Adapter_Memcache extends My_KeyValueStore_Adapter_Abstrac
 			$values->append( $value );
 		} elseif ( is_array( $values ) == true || $values == null ) {
 			if ( method_exists( $this, ( '_getAppendKey' ) ) ) {
-				// _getAppendKey‚Æ‚¢‚¤ƒƒ\ƒbƒh‚ªÀ‘•‚³‚ê‚Ä‚¢‚ê‚ÎA‚»‚±‚©‚çƒL[‚ğæ“¾‚·‚é
+				// _getAppendKeyã¨ã„ã†ãƒ¡ã‚½ãƒƒãƒ‰ãŒå®Ÿè£…ã•ã‚Œã¦ã„ã‚Œã°ã€ãã“ã‹ã‚‰ã‚­ãƒ¼ã‚’å–å¾—ã™ã‚‹
 				$appendKey = $this->_getAppendKey( $name, $userId );
 				if ( $appendKey === false || $appendKey == null ) {
 					require_once 'My/KeyValueStore/Exception.php';
@@ -142,11 +142,11 @@ class My_KeyValueStore_Adapter_Memcache extends My_KeyValueStore_Adapter_Abstrac
 				}
 				$values[ $appendKey ] = $value;
 			} else {
-				// –³‚¯‚ê‚ÎŒ»İ‚Ì”z—ñ‚É’Ç‹L‚·‚é
+				// ç„¡ã‘ã‚Œã°ç¾åœ¨ã®é…åˆ—ã«è¿½è¨˜ã™ã‚‹
 				$values[] = $value;
 			}
 		}
-		// _setBase Às—pƒpƒ‰ƒ[ƒ^¶¬
+		// _setBase å®Ÿè¡Œç”¨ãƒ‘ãƒ©ãƒ¡ãƒ¼ã‚¿ç”Ÿæˆ
 		$setArgs = array(
 				$values,
 				$expiration,
@@ -187,7 +187,7 @@ class My_KeyValueStore_Adapter_Memcache extends My_KeyValueStore_Adapter_Abstrac
 			}
 			unset( $values[ $index ] );
 		}
-		// _setBase Às—pƒpƒ‰ƒ[ƒ^¶¬
+		// _setBase å®Ÿè¡Œç”¨ãƒ‘ãƒ©ãƒ¡ãƒ¼ã‚¿ç”Ÿæˆ
 		$setArgs = array(
 				$values,
 				$expiration,
@@ -230,7 +230,7 @@ class My_KeyValueStore_Adapter_Memcache extends My_KeyValueStore_Adapter_Abstrac
 			$pullValue = $values[ $index ];
 			unset( $values[ $index ] );
 		}
-		// _setBase Às—pƒpƒ‰ƒ[ƒ^¶¬
+		// _setBase å®Ÿè¡Œç”¨ãƒ‘ãƒ©ãƒ¡ãƒ¼ã‚¿ç”Ÿæˆ
 		$setArgs = array(
 				$values,
 				$expiration,
@@ -310,8 +310,8 @@ class My_KeyValueStore_Adapter_Memcache extends My_KeyValueStore_Adapter_Abstrac
 			}
 		} else {
 			$counter = $this->_getBase( $name, null );
-			// FIXME WARNING: signed intŒ^‚É•ÏŠ·‚µ‚Ä‚¢‚é‚½‚ßAsigned int‚Ì•‚ğ’´‚¦‚éŒ…”‚Ìê‡‚ÍA
-			// ˆÈ~ŒvZ‚³‚ê‚È‚¢A‚ ‚é‚¢‚Í•‰‚Ì”’l‚É•ÏŠ·‚³‚ê‚é‰Â”\«‚ª‚ ‚è‚Ü‚·
+			// FIXME WARNING: signed intå‹ã«å¤‰æ›ã—ã¦ã„ã‚‹ãŸã‚ã€signed intã®å¹…ã‚’è¶…ãˆã‚‹æ¡æ•°ã®å ´åˆã¯ã€
+			// ä»¥é™è¨ˆç®—ã•ã‚Œãªã„ã€ã‚ã‚‹ã„ã¯è² ã®æ•°å€¤ã«å¤‰æ›ã•ã‚Œã‚‹å¯èƒ½æ€§ãŒã‚ã‚Šã¾ã™
 			$counter = intval( $counter );
 			$counter += $offset;
 			$this->_setBase( $name, array( $counter, 0 ) );
